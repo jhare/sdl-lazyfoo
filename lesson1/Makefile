@@ -1,6 +1,12 @@
 OBJS = 01_hello_SDL.cpp
 
+CC = g++
+
+COMPILER_FLAGS = -w
+
+LINKER_FLAGS = -lSDL2
+
 OBJ_NAME = 01_hello_SDL
 
 all : $(OBJS)
-	g++ $(OBJS) -w -lSDL2 -o $(OBJ_NAME)
+	$(CC) $(OBJS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
