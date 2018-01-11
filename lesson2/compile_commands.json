@@ -1,0 +1,14 @@
+[
+    {
+        "arguments": [
+            "c++",
+            "-c",
+            "-w",
+            "-o",
+            "leeons2",
+            "lesson2.cpp"
+        ],
+        "directory": "/home/jhare/projects/webasm/sdl-lazyfoo/lesson2",
+        "file": "lesson2.cpp"
+    }
+]
