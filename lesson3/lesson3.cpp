@@ -1,24 +1,48 @@
 #include <SDL2/SDL.h>
+#include <stdio.h>
 
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
 bool init();
 bool loadMedia();
-
 void close();
 
-SDL_Window* gWindow;
+SDL_Window* gWindow = NULL;
+SDL_Surface* gScreenSurface = NULL;
+SDL_Surface* gXOut = NULL;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
+  if(!init()) {
+    printf("Could not initialize!\n");
+  } else {
+    if(!loadMedia()) {
+      printf("Could not load x bmp!\n");
+    } else {
+      bool quit = false;
+      SDL_Event e;
+      while(!quit) {
+        while(SDL_PollEvent(&e) != 0) {
+          if(e.type == SDL_QUIT) {
+            printf("Quitting on purpopse!\n");
+            quit = true;
+          }
+
+          SDL_BlitSurface(gXOut, NULL, gScreenSurface, NULL);
+          SDL_UpdateWindowSurface(gWindow);
+        }
+      }
+    }
+  }
 
   close();
   return 0;
 }
 
-bool init() {
+bool init()
+{
   bool success = true;
-
 
   if(SDL_Init(SDL_INIT_VIDEO) < 0) {
     printf("Could not init video: %s\n", SDL_GetError());
@@ -27,16 +51,33 @@ bool init() {
     gWindow = SDL_CreateWindow("jhare SDL lesson 3", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if(gWindow == NULL) {
       printf("Could not create window: %s\n", SDL_GetError());
+      success = false;
     } else {
-
+      gScreenSurface = SDL_GetWindowSurface(gWindow);
     }
   }
 
-  close();
   return success;
 }
 
-void close() {
+bool loadMedia()
+{
+  bool success = true;
+
+  gXOut = SDL_LoadBMP("03_event_driven_programming/x.bmp");
+  if(gXOut == NULL) {
+    printf("Could not load xout bmp: %s\n", SDL_GetError());
+    success = false;
+  }
+
+  return success;
+}
+
+void close() 
+{
+  SDL_FreeSurface(gXOut);
+  gXOut = NULL;
+
   SDL_DestroyWindow(gWindow);
   gWindow = NULL;
 
