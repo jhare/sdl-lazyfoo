@@ -1,0 +1,14 @@
+[
+    {
+        "arguments": [
+            "c++",
+            "-c",
+            "-w",
+            "-o",
+            "stretch",
+            "stretch.cpp"
+        ],
+        "directory": "/home/jhare/projects/webasm/sdl-lazyfoo/lesson5",
+        "file": "stretch.cpp"
+    }
+]
