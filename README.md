@@ -12,3 +12,13 @@ Some other useful linker flags, also managed by apt
 * `-lSDL2_image`
 * `-lSDL2_ttf`
 * `-lSDL2_mixer`
+
+** Note on loading PNGs**
+If you get a warning
+```
+libpng warning: iCCP: known incorrect sRGB profile
+```
+
+Newer versions of libpng (1.6) don't want that partial iCCP data in your PNGs any more. If
+you have ImageMagick installed on your system do `mogrify your-file.png` to remove
+the blank chunk.
