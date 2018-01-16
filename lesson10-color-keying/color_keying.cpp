@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include "LTexture.h"
 #include <string>
 #include <stdio.h>
 
@@ -18,11 +19,14 @@ void close();
 
 int main(int argc, char* argv[])
 {
+
+  LTexture tex = LTexture();
+
   if(!init()) {
     printf("Could not initialize SDL!\n");
   } else {
     if(!loadMedia()) {
-      printf("Could not load media for texture demo!\n");
+      printf("Could not load media for this exercise!\n");
     } else {
       SDL_Event e;
       bool quit = false;

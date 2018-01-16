@@ -1,4 +1,4 @@
-OBJS = color_keying.cpp
+OBJS = color_keying.cpp LTexture.cpp
 OBJ_NAME = color_keying
 CC = g++
 COMPILER_FLAGS = -w
