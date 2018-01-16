@@ -19,9 +19,6 @@ void close();
 
 int main(int argc, char* argv[])
 {
-
-  LTexture tex = LTexture();
-
   if(!init()) {
     printf("Could not initialize SDL!\n");
   } else {
