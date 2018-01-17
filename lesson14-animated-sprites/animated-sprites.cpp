@@ -72,6 +72,10 @@ int LTexture::getHeight()
   return mHeight;
 }
 
+const int WALKING_ANIMATION_FRAMES = 4;
+SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
+LTexture gSpriteSheetTexture;
+
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 LTexture gModulatedTexture;
@@ -147,12 +151,9 @@ int main(int argc, char* argv[])
     } else {
       SDL_Event e;
       bool quit = false;
+      int frame = 0;
 
-      Uint8 r = 255;
-      Uint8 g = 255;
-      Uint8 b = 255;
-
-      Uint8 a = 255;
+      SDL_Rect* currentClip = NULL;
 
       while(!quit) {
         while(SDL_PollEvent(&e) != 0) {
@@ -163,31 +164,22 @@ int main(int argc, char* argv[])
               quit = true;
             }
 
-            if(e.key.keysym.sym == SDLK_w) {
-              if(a + 32 > 255) {
-                a = 255;
-              } else {
-                a += 32;
-              }
-            } else if(e.key.keysym.sym == SDLK_s) {
-              if(a - 32 < 0) {
-                a = 0;
-              } else {
-                a -= 32;
-              }
-            }
           }
         }
 
         SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
         SDL_RenderClear(gRenderer);
 
-        gBackgroundTexture.render(0, 0, NULL);
-
-        gModulatedTexture.setAlpha(a);
-        gModulatedTexture.render(0, 0, NULL);
+        currentClip = &gSpriteClips[frame / 4];
+        gSpriteSheetTexture.render((SCREEN_WIDTH - currentClip->w) / 2, (SCREEN_HEIGHT - currentClip->h) / 2, currentClip);
 
         SDL_RenderPresent(gRenderer);
+
+        // after we render this frame, advance to the next, wrap around
+        ++frame;
+        if(frame/4 >= WALKING_ANIMATION_FRAMES) { // % assignment faster here?
+          frame = 0;
+        }
       }
     }
   }
@@ -198,7 +190,7 @@ int main(int argc, char* argv[])
 
 void close()
 {
-  gModulatedTexture.free();
+  gSpriteSheetTexture.free();
 
   SDL_DestroyRenderer(gRenderer);
   gRenderer = NULL;
@@ -214,15 +206,30 @@ bool loadMedia()
 {
   bool success = true;
 
-  if(!gModulatedTexture.loadFromFile("./13_alpha_blending/fadeout.png")) {
-    printf("Couldn't load modulation example: %s\n", SDL_GetError());
+  if(!gSpriteSheetTexture.loadFromFile("./14_animated_sprites_and_vsync/foo.png")) {
+    printf("Couldn't load our foo! We need him.: %s\n", SDL_GetError());
     success = false;
   } else {
-    gModulatedTexture.setBlendMode(SDL_BLENDMODE_BLEND);
-  }
+    // Okay I didn't type this bit again
+    gSpriteClips[ 0 ].x =   0;
+    gSpriteClips[ 0 ].y =   0;
+    gSpriteClips[ 0 ].w =  64;
+    gSpriteClips[ 0 ].h = 205;
 
-  if(!gBackgroundTexture.loadFromFile("./13_alpha_blending/fadein.png")) {
+    gSpriteClips[ 1 ].x =  64;
+    gSpriteClips[ 1 ].y =   0;
+    gSpriteClips[ 1 ].w =  64;
+    gSpriteClips[ 1 ].h = 205;
+    
+    gSpriteClips[ 2 ].x = 128;
+    gSpriteClips[ 2 ].y =   0;
+    gSpriteClips[ 2 ].w =  64;
+    gSpriteClips[ 2 ].h = 205;
 
+    gSpriteClips[ 3 ].x = 196;
+    gSpriteClips[ 3 ].y =   0;
+    gSpriteClips[ 3 ].w =  64;
+    gSpriteClips[ 3 ].h = 205;
   }
 
   return success;
@@ -249,7 +256,8 @@ bool init()
       reportError("Could not create window");
       success = false;
     } else {
-      gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+      // Create renderer with vsync enabled. bauses would make this a setting
+      gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
       if(gRenderer == NULL) {
         reportError("Could not create renderer");
         success = false;
