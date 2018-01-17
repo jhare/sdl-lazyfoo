@@ -31,6 +31,7 @@ class LTexture
     void render(int x, int y, SDL_Rect* clip, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
     void free();
     bool loadFromFile(std::string path);
+    bool loadFromRenderedText(std::string textureText, SDL_Color textColor);
 
     int getWidth();
     int getHeight();
@@ -80,7 +81,8 @@ LTexture gSpriteSheetTexture;
 
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
-LTexture gArrowTexture;
+TTF_Font* gFont = NULL;
+LTexture gTextTexture;
 
 // lol I dunno if this is lexically necessary to be here but...
 // they want that gRenderer reference
@@ -107,6 +109,29 @@ bool LTexture::loadFromFile(std::string path)
 
   mTexture = newTexture;
   return mTexture != NULL;
+}
+
+bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor)
+{
+  free();
+
+  SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColor);
+  if(textSurface == NULL)
+  {
+    printf("Cannot load font surface TTF %s\n", TTF_GetError());
+  } else {
+    mTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
+    if(mTexture == NULL) {
+      printf("Could not create texture from surface for font: %s\n", SDL_GetError());
+    } else {
+      mWidth = textSurface->w;
+      mHeight = textSurface->h;
+    }
+
+    SDL_FreeSurface(textSurface);
+  }
+
+  return (mTexture != NULL);
 }
 
 void LTexture::setColor(Uint8 red, Uint8 green, Uint8 blue)
@@ -152,8 +177,6 @@ int main(int argc, char* argv[])
     } else {
       SDL_Event e;
       bool quit = false;
-      double degrees = 0;
-      SDL_RendererFlip flipType = SDL_FLIP_NONE;
 
       while(!quit) {
         while(SDL_PollEvent(&e) != 0) {
@@ -164,49 +187,13 @@ int main(int argc, char* argv[])
               quit = true;
             }
 
-            /** if we wanted to lock the rotation */
-
-            /*
-            if(e.key.keysym.sym == SDLK_w) {
-              if(degrees += 30 >= 360) {
-                degrees = 360;
-              } else {
-                degrees += 30;
-              }
-            } else if(e.key.keysym.sym == SDLK_s) {
-              if(degrees -= 30 <= 0) {
-                degrees = 0;
-              } else {
-                degrees -= 30;
-              }
-            }
-            */
-
-            switch(e.key.keysym.sym) {
-              case SDLK_w:
-                degrees += 60;
-                break;
-              case SDLK_s:
-                degrees -= 60;
-                break;
-              case SDLK_e:
-                flipType = SDL_FLIP_NONE;
-                break;
-              case SDLK_a:
-                flipType = SDL_FLIP_HORIZONTAL;
-                break;
-              case SDLK_d:
-                flipType = SDL_FLIP_VERTICAL;
-                break;
-            }
-
           }
         }
 
         SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
         SDL_RenderClear(gRenderer);
 
-        gArrowTexture.render((SCREEN_WIDTH - gArrowTexture.getWidth()) / 2, (SCREEN_HEIGHT - gArrowTexture.getHeight()) / 2, NULL, degrees, NULL, flipType);
+        gTextTexture.render((SCREEN_WIDTH - gTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2, NULL);
 
         SDL_RenderPresent(gRenderer);
 
@@ -220,7 +207,10 @@ int main(int argc, char* argv[])
 
 void close()
 {
-  gSpriteSheetTexture.free();
+  gTextTexture.free();
+
+  TTF_CloseFont(gFont);
+  gFont = NULL;
 
   SDL_DestroyRenderer(gRenderer);
   gRenderer = NULL;
@@ -230,16 +220,25 @@ void close()
 
   IMG_Quit();
   SDL_Quit();
+  TTF_Quit();
 }
 
 bool loadMedia() 
 {
   bool success = true;
 
-  if(!gArrowTexture.loadFromFile("./15_rotation_and_flipping/arrow.png")) {
-    printf("Could not load the arrow: %s\n", SDL_GetError());
+  // load lazy's font
+  gFont = TTF_OpenFont("./16_true_type_fonts/lazy.ttf", 28); 
+  if(gFont == NULL) {
+    printf("Could not load font from file: %s\n", TTF_GetError());
     success = false;
-  } 
+  } else {
+    SDL_Color textColor = {0, 0, 0};
+    if(!gTextTexture.loadFromRenderedText("The quick brown fox jumps over the lazy dog.", textColor)) {
+      printf("Failed to render text to texture!\n");
+      success = false;
+    }
+  }
 
   return success;
 }
@@ -275,6 +274,11 @@ bool init()
       int imgFlags = IMG_INIT_PNG;
       if(!(IMG_Init(imgFlags) & imgFlags)) {
         reportError("Could not initialize PNG library.");
+      }
+
+      if(TTF_Init() == -1) {
+        printf("Could not initialize TTF subsystem: %s\n", TTF_GetError());
+        success = false;
       }
     }
   }
