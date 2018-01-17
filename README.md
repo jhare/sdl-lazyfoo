@@ -16,7 +16,7 @@ Some other useful linker flags, also managed by apt
 * `-lSDL2_ttf`
 * `-lSDL2_mixer`
 
-** Note on loading PNGs**
+**Note on loading PNGs**
 If you get a warning
 ```
 libpng warning: iCCP: known incorrect sRGB profile
