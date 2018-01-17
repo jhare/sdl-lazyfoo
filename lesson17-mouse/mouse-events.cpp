@@ -8,14 +8,89 @@
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-/**
- * Following along with the example we'll just do
- * the declaration and definition of this class in the same
- * file. It simplifies the code for begineers. Otherwise you'd
- * have to inject the gRenderer instance into the LTexture class
- * with a pointer and store that persistently in the class.
- *  Not a huge deal, but a detour for beginners.
- */
+const int BUTTON_WIDTH = 300;
+const int BUTTON_HEIGHT = 200;
+const int TOTAL_BUTTONS = 4;
+
+enum LButtonSprite
+{
+  BUTTON_SPRITE_MOUSE_OUT = 0,
+  BUTTON_SPRITE_MOUSE_OVER_MOTION = 1,
+  BUTTON_SPRITE_MOUSE_DOWN = 2,
+  BUTTON_SPRITE_MOUSE_UP = 3,
+  BUTTON_SPRITE_TOTAL = 4
+};
+
+
+class LButton
+{
+  public:
+    LButton();
+
+    void setPosition(int x, int y);
+    void handleEvent(SDL_Event* e);
+    void render();
+
+  private:
+    SDL_Point mPosition;
+    LButtonSprite mCurrentSprite;
+};
+
+LButton::LButton()
+{
+  mPosition.x = 0;
+  mPosition.y = 0;
+
+  mCurrentSprite = BUTTON_SPRITE_MOUSE_OUT;
+}
+
+void LButton::setPosition(int x, int y)
+{
+  mPosition.x = x;
+  mPosition.y = y;
+}
+
+void LButton::handleEvent(SDL_Event* e)
+{
+  if(e->type == SDL_MOUSEMOTION ||
+     e->type == SDL_MOUSEBUTTONDOWN || 
+     e->type == SDL_MOUSEBUTTONUP)
+  {
+    int x, y;
+    SDL_GetMouseState(&x, &y);
+
+    bool inside = true;
+
+    // See if we're inside the button
+    if(x < mPosition.x) {
+      inside = false;
+    } else if(x > mPosition.x + BUTTON_WIDTH) {
+      inside = false;
+    } else if(y < mPosition.y) {
+      inside = false;
+    } else if(y > mPosition.y + BUTTON_HEIGHT) {
+      inside = false;
+    }
+
+    if(!inside) {
+      mCurrentSprite = BUTTON_SPRITE_MOUSE_OUT;
+    } else {
+      switch(e->type) {
+        case SDL_MOUSEMOTION:
+          mCurrentSprite = BUTTON_SPRITE_MOUSE_OVER_MOTION;
+          break;
+        case SDL_MOUSEBUTTONDOWN:
+          mCurrentSprite = BUTTON_SPRITE_MOUSE_DOWN;
+          break;
+        case SDL_MOUSEBUTTONUP:
+          mCurrentSprite = BUTTON_SPRITE_MOUSE_UP;
+          break;
+      }
+    }
+  }
+  
+}
+
 
 class LTexture
 {
@@ -31,6 +106,8 @@ class LTexture
     void render(int x, int y, SDL_Rect* clip, double angle = 0.0, SDL_Point* center = NULL, SDL_RendererFlip flip = SDL_FLIP_NONE);
     void free();
     bool loadFromFile(std::string path);
+
+    // I'm skipping the #ifdef they do in the example we'll always just include it for now
     bool loadFromRenderedText(std::string textureText, SDL_Color textColor);
 
     int getWidth();
@@ -75,14 +152,19 @@ int LTexture::getHeight()
   return mHeight;
 }
 
-const int WALKING_ANIMATION_FRAMES = 4;
-SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
-LTexture gSpriteSheetTexture;
-
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
-TTF_Font* gFont = NULL;
-LTexture gTextTexture;
+
+SDL_Rect gSpriteClips[BUTTON_SPRITE_TOTAL];
+LTexture gButtonSpriteSheetTexture;
+
+// dumbbbbb we need to organize this better than the example heh
+void LButton::render()
+{
+  gButtonSpriteSheetTexture.render(mPosition.x, mPosition.y, &gSpriteClips[mCurrentSprite]);
+}
+//Buttons objects
+LButton gButtons[ TOTAL_BUTTONS ]; 
 
 // lol I dunno if this is lexically necessary to be here but...
 // they want that gRenderer reference
@@ -109,29 +191,6 @@ bool LTexture::loadFromFile(std::string path)
 
   mTexture = newTexture;
   return mTexture != NULL;
-}
-
-bool LTexture::loadFromRenderedText(std::string textureText, SDL_Color textColor)
-{
-  free();
-
-  SDL_Surface* textSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColor);
-  if(textSurface == NULL)
-  {
-    printf("Cannot load font surface TTF %s\n", TTF_GetError());
-  } else {
-    mTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
-    if(mTexture == NULL) {
-      printf("Could not create texture from surface for font: %s\n", SDL_GetError());
-    } else {
-      mWidth = textSurface->w;
-      mHeight = textSurface->h;
-    }
-
-    SDL_FreeSurface(textSurface);
-  }
-
-  return (mTexture != NULL);
 }
 
 void LTexture::setColor(Uint8 red, Uint8 green, Uint8 blue)
@@ -186,17 +245,21 @@ int main(int argc, char* argv[])
             if(e.key.keysym.sym == SDLK_q) {
               quit = true;
             }
+          }
 
+          for(int i = 0; i < TOTAL_BUTTONS; ++i) {
+            gButtons[i].handleEvent(&e);
           }
         }
 
         SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
         SDL_RenderClear(gRenderer);
 
-        gTextTexture.render((SCREEN_WIDTH - gTextTexture.getWidth()) / 2, (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2, NULL);
+        for(int i = 0; i < TOTAL_BUTTONS; ++i) {
+          gButtons[i].render();
+        }
 
         SDL_RenderPresent(gRenderer);
-
       }
     }
   }
@@ -207,10 +270,7 @@ int main(int argc, char* argv[])
 
 void close()
 {
-  gTextTexture.free();
-
-  TTF_CloseFont(gFont);
-  gFont = NULL;
+  gButtonSpriteSheetTexture.free();
 
   SDL_DestroyRenderer(gRenderer);
   gRenderer = NULL;
@@ -227,18 +287,23 @@ bool loadMedia()
 {
   bool success = true;
 
-  // load lazy's font
-  gFont = TTF_OpenFont("./16_true_type_fonts/lazy.ttf", 28); 
-  if(gFont == NULL) {
-    printf("Could not load font from file: %s\n", TTF_GetError());
-    success = false;
-  } else {
-    SDL_Color textColor = {0, 0, 0};
-    if(!gTextTexture.loadFromRenderedText("The quick brown fox jumps over the lazy dog.", textColor)) {
-      printf("Failed to render text to texture!\n");
-      success = false;
-    }
-  }
+	if(!gButtonSpriteSheetTexture.loadFromFile("./17_mouse_events/button.png")) {
+		printf("Failed to load button sprite texture: %s\n", SDL_GetError());
+		success = false;
+	}
+	else {
+		for(int i = 0; i < BUTTON_SPRITE_TOTAL; ++i) {
+			gSpriteClips[i].x = 0;
+			gSpriteClips[i].y = i * 200;
+			gSpriteClips[i].w = BUTTON_WIDTH;
+			gSpriteClips[i].h = BUTTON_HEIGHT;
+		}
+
+		gButtons[0].setPosition(0, 0);
+		gButtons[1].setPosition(SCREEN_WIDTH - BUTTON_WIDTH, 0);
+		gButtons[2].setPosition(0, SCREEN_HEIGHT - BUTTON_HEIGHT);
+		gButtons[3].setPosition(SCREEN_WIDTH - BUTTON_WIDTH, SCREEN_HEIGHT - BUTTON_HEIGHT);
+	}
 
   return success;
 }
